@@ -31,7 +31,8 @@ impl IntoProblem for AppError {
             AppError::NotFound { resource } => Problem::not_found()
                 .title("Resource not found")
                 .detail(format!("{resource} does not exist"))
-                .code("RESOURCE_NOT_FOUND"),
+                .code("RESOURCE_NOT_FOUND")
+                .trace_id("example-trace-id"),
             AppError::InternalFailure(msg) => Problem::internal_server_error().with_cause_str(msg),
         }
     }

@@ -28,6 +28,22 @@ safe defaults that prevent leaking internal details in 500 responses, and first-
 - Axum `IntoResponse` integration (optional feature)
 - Minimal dependencies: core crate requires only `serde` and `serde_json`
 
+## Stability Guarantees
+
+The following are considered **stable** and will not change in 0.x without a major notice:
+
+- **RFC 7807 fields**: `type`, `title`, `status`, `detail`, `instance`
+- **Extension keys reserved by this crate**: `code`, `trace_id`, `request_id`, `errors`
+- **Validation errors shape**: each item in the `"errors"` array contains `field` (String), `message` (String), and optional `code` (String)
+- **Safe 500 behavior**: `Problem::internal_server_error()` always defaults to a generic public message; internal causes are never serialized
+
+## Docs.rs
+
+The canonical API documentation with copy-paste examples lives on docs.rs:
+
+- **Core**: [docs.rs/rust-rfc7807](https://docs.rs/rust-rfc7807)
+- **Axum**: [docs.rs/rust-rfc7807-axum](https://docs.rs/rust-rfc7807-axum)
+
 ## Workspace
 
 | Crate | Description |
@@ -111,6 +127,36 @@ async fn main() {
 ```
 
 The response will have status `404`, content type `application/problem+json`, and a structured JSON body.
+
+## Runnable Example
+
+The `examples/axum-api` directory contains a complete Axum server with 4 routes:
+
+```bash
+cargo run -p axum-api
+```
+
+Then test with curl:
+
+```bash
+# 200 OK
+curl -s http://localhost:3000/ok
+# {"message":"Hello, world!"}
+
+# 404 Not Found (application/problem+json)
+curl -s -i http://localhost:3000/not-found
+# HTTP/1.1 404 Not Found
+# content-type: application/problem+json
+# {"title":"Resource not found","status":404,"detail":"User 42 does not exist","code":"RESOURCE_NOT_FOUND","trace_id":"example-trace-id"}
+
+# 422 Validation Error
+curl -s -X POST -H 'Content-Type: application/json' -d '{}' http://localhost:3000/validate
+# {"type":"validation_error","title":"Validation failed","status":422,"code":"VALIDATION_ERROR","errors":[...]}
+
+# 500 Internal Server Error (no secrets leaked)
+curl -s http://localhost:3000/internal
+# {"title":"Internal Server Error","status":500,"detail":"An unexpected error occurred."}
+```
 
 ## Creating Problems
 
@@ -245,6 +291,26 @@ assert!(cause.to_string().contains("db:5432"));
 - **Explicit over magic.** No global error registries. No derive macros that hide behavior. You implement `IntoProblem`, you see exactly what maps to what.
 - **Secure by default.** 500 errors produce generic messages. Internal causes must be opted into and are never serialized.
 - **Predictable output.** `None` fields are omitted. Empty extensions produce no extra keys. What you build is what gets serialized.
+
+## Publishing
+
+Both crates publish automatically when commits land on `main`. To control the version bump type, include a keyword in your commit message:
+
+- **Patch** (default): `fix: handle empty detail field`
+- **Minor**: `feat: add actix integration [minor]`
+- **Major**: `breaking: change Problem fields [major]`
+- **Skip release**: `docs: fix typo [skip release]`
+
+To publish manually:
+
+```bash
+# 1. Bump versions in both crates/rust-rfc7807/Cargo.toml and crates/rust-rfc7807-axum/Cargo.toml
+# 2. Commit, tag, and push:
+git tag v0.2.0
+git push origin main --tags
+```
+
+Required GitHub secret: `CARGO_REGISTRY_TOKEN` in the `crates-io` environment.
 
 ## Roadmap
 

@@ -4,6 +4,7 @@ version = "0.1.2"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
+authors.workspace = true
 repository.workspace = true
 description = "Axum integration for RFC 7807 Problem Details (rust-rfc7807)"
 documentation = "https://docs.rs/rust-rfc7807-axum"
