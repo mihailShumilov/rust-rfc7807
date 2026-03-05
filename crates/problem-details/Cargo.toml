@@ -5,9 +5,11 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "RFC 7807 Problem Details for HTTP APIs"
-keywords = ["rfc7807", "problem-details", "error", "http", "api"]
-categories = ["web-programming", "encoding"]
+description = "RFC 7807 Problem Details for HTTP APIs — lightweight, safe, ergonomic"
+documentation = "https://docs.rs/problem-details"
+readme = "../../README.md"
+keywords = ["rfc7807", "problem-details", "http", "api", "errors"]
+categories = ["web-programming", "network-programming"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }

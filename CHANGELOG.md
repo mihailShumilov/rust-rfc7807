@@ -9,17 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Initial release of `problem-details` core crate.
+- `problem-details` core crate (v0.1.0):
   - RFC 7807 `Problem` type with builder API.
-  - Extension fields support via `BTreeMap<String, serde_json::Value>`.
-  - Validation errors (`errors` extension key).
-  - Error codes (`code` extension key).
-  - Trace correlation (`trace_id`, `request_id` extension keys).
-  - Internal cause storage (never serialized).
+  - Extension fields via `serde_json::Map<String, Value>`.
+  - `ValidationItem` struct and `Problem::validation()` constructor.
+  - `Problem::push_error()` / `Problem::push_error_code()` for field-level errors.
+  - Error codes via `.code()` extension key.
+  - Trace correlation via `.trace_id()` / `.request_id()` extension keys.
+  - `InternalCause` storage (never serialized to JSON).
+  - `.with_cause()` for attaching `dyn Error` causes.
   - `IntoProblem` trait for domain error mapping.
-- Initial release of `problem-details-axum` integration crate.
+  - `APPLICATION_PROBLEM_JSON` content-type constant.
+- `problem-details-axum` integration crate (v0.1.0):
   - `IntoResponse` implementation for `Problem`.
-  - `ApiError` wrapper with safe 500 handling.
-  - Trace ID helpers.
+  - `ApiError` enum with safe 500 handling.
+  - `attach_trace()` helper.
   - Optional `tracing` feature.
 - Example Axum application with integration tests.
+- GitHub Actions CI and release workflows.

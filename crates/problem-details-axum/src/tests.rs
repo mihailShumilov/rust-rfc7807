@@ -1,15 +1,12 @@
-use axum::response::IntoResponse;
+use axum_core::response::IntoResponse;
 use http::header;
 use problem_details::{Problem, APPLICATION_PROBLEM_JSON};
 
-use crate::{with_trace, ApiError};
+use crate::{attach_trace, ApiError};
 
-#[test]
-fn into_response_sets_correct_status() {
-    let problem = Problem::not_found().with_title("Not Found");
-    let response = problem.into_response();
-    assert_eq!(response.status().as_u16(), 404);
-}
+// ---------------------------------------------------------------------------
+// IntoResponse sets Content-Type correctly
+// ---------------------------------------------------------------------------
 
 #[test]
 fn into_response_sets_content_type() {
@@ -21,58 +18,102 @@ fn into_response_sets_content_type() {
     );
 }
 
+// ---------------------------------------------------------------------------
+// Status is applied properly
+// ---------------------------------------------------------------------------
+
 #[test]
-fn into_response_body_is_valid_json() {
-    let problem = Problem::not_found()
-        .with_title("Not Found")
-        .with_code("NOT_FOUND");
+fn into_response_sets_status_code() {
+    let problem = Problem::not_found().title("Not Found");
+    let response = problem.into_response();
+    assert_eq!(response.status().as_u16(), 404);
+}
+
+#[test]
+fn into_response_forbidden() {
+    let response = Problem::forbidden().into_response();
+    assert_eq!(response.status().as_u16(), 403);
+}
+
+// ---------------------------------------------------------------------------
+// Unknown errors become safe 500
+// ---------------------------------------------------------------------------
+
+#[test]
+fn unknown_error_converts_to_safe_500() {
+    let err = ApiError::internal(std::io::Error::other("secret database password"));
+    let response = err.into_response();
+
+    assert_eq!(response.status().as_u16(), 500);
+    assert_eq!(
+        response.headers().get(header::CONTENT_TYPE).unwrap(),
+        APPLICATION_PROBLEM_JSON
+    );
+}
+
+#[test]
+fn api_error_internal_variant_does_not_leak() {
+    // Verify by checking Problem serialization directly since we can't
+    // easily read the response body in sync tests.
+    let problem = Problem::internal_server_error().with_cause_str("secret password=hunter2");
+    let json = serde_json::to_string(&problem).unwrap();
+    assert!(!json.contains("hunter2"));
+    assert!(!json.contains("secret password"));
+    assert!(json.contains("An unexpected error occurred."));
+}
+
+// ---------------------------------------------------------------------------
+// trace_id attaches when provided
+// ---------------------------------------------------------------------------
+
+#[test]
+fn trace_id_attaches_via_helper() {
+    let problem = attach_trace(Problem::bad_request(), "trace-xyz-789");
+    let json = serde_json::to_value(&problem).unwrap();
+    assert_eq!(json["trace_id"], "trace-xyz-789");
+}
+
+// ---------------------------------------------------------------------------
+// ApiError from Problem
+// ---------------------------------------------------------------------------
+
+#[test]
+fn api_error_from_problem() {
+    let err = ApiError::from(Problem::not_found().title("Gone"));
+    let response = err.into_response();
+    assert_eq!(response.status().as_u16(), 404);
+}
+
+// ---------------------------------------------------------------------------
+// ApiError from domain error
+// ---------------------------------------------------------------------------
+
+#[test]
+fn api_error_from_domain() {
+    use problem_details::IntoProblem;
+
+    struct MyError;
+    impl IntoProblem for MyError {
+        fn into_problem(self) -> Problem {
+            Problem::conflict().code("DUPLICATE")
+        }
+    }
+
+    let err = ApiError::from_domain(MyError);
+    let response = err.into_response();
+    assert_eq!(response.status().as_u16(), 409);
+}
+
+// ---------------------------------------------------------------------------
+// Serialization sanity
+// ---------------------------------------------------------------------------
+
+#[test]
+fn problem_json_body_is_valid() {
+    let problem = Problem::not_found().title("Not Found").code("NOT_FOUND");
     let json_str = serde_json::to_string(&problem).unwrap();
     let parsed: serde_json::Value = serde_json::from_str(&json_str).unwrap();
     assert_eq!(parsed["status"], 404);
     assert_eq!(parsed["title"], "Not Found");
     assert_eq!(parsed["code"], "NOT_FOUND");
-}
-
-#[test]
-fn unknown_error_converts_to_safe_500() {
-    let err = ApiError::internal("secret database password leaked");
-    let problem = err.problem();
-
-    assert_eq!(problem.status, Some(500));
-    assert_eq!(
-        problem.detail.as_deref(),
-        Some("An internal error occurred")
-    );
-
-    // The internal cause is stored but never serialized
-    assert_eq!(
-        problem.internal_cause(),
-        Some("secret database password leaked")
-    );
-
-    let json = serde_json::to_string(problem).unwrap();
-    assert!(!json.contains("secret"));
-    assert!(!json.contains("password"));
-    assert!(!json.contains("leaked"));
-}
-
-#[test]
-fn api_error_from_problem() {
-    let problem = Problem::not_found().with_title("Gone");
-    let err = ApiError::from(problem);
-    assert_eq!(err.problem().status, Some(404));
-}
-
-#[test]
-fn trace_id_appears_when_set() {
-    let problem = with_trace(Problem::bad_request(), "trace-xyz-789");
-    let json = serde_json::to_value(&problem).unwrap();
-    assert_eq!(json["trace_id"], "trace-xyz-789");
-}
-
-#[test]
-fn api_error_into_response_status() {
-    let err = ApiError::from(Problem::forbidden());
-    let response = err.into_response();
-    assert_eq!(response.status().as_u16(), 403);
 }

@@ -1,10 +1,10 @@
 //! # problem-details
 //!
-//! Implementation of [RFC 7807 Problem Details for HTTP APIs](https://www.rfc-editor.org/rfc/rfc7807).
+//! [RFC 7807](https://www.rfc-editor.org/rfc/rfc7807) Problem Details for HTTP APIs.
 //!
-//! This crate provides a framework-agnostic [`Problem`] type that serializes to
-//! `application/problem+json` responses, along with pragmatic extensions for
-//! validation errors, error codes, and trace correlation.
+//! This crate provides a lightweight, framework-agnostic [`Problem`] type that serializes
+//! to `application/problem+json` with safe defaults, an ergonomic builder API, and
+//! first-class support for validation errors, error codes, and trace correlation.
 //!
 //! # Quick Start
 //!
@@ -12,30 +12,44 @@
 //! use problem_details::Problem;
 //!
 //! let problem = Problem::not_found()
-//!     .with_title("User not found")
-//!     .with_detail("No user with ID 42 exists")
-//!     .with_code("USER_NOT_FOUND");
+//!     .title("User not found")
+//!     .detail("No user with ID 42 exists")
+//!     .code("USER_NOT_FOUND");
 //!
 //! let json = serde_json::to_value(&problem).unwrap();
 //! assert_eq!(json["status"], 404);
+//! assert_eq!(json["code"], "USER_NOT_FOUND");
 //! ```
 //!
 //! # Security
 //!
-//! For 5xx errors, [`Problem`] defaults the public detail to a generic message
-//! to prevent leaking internal information. Use [`Problem::with_internal_cause`]
-//! to store diagnostic details that are never serialized.
+//! For 5xx errors, [`Problem`] defaults to a generic public message to prevent
+//! leaking internal information. Use [`Problem::with_cause`] to attach a diagnostic
+//! error that is **never serialized**.
 //!
-//! # Extensions
+//! ```
+//! use problem_details::Problem;
 //!
-//! RFC 7807 allows arbitrary extension fields. This crate provides first-class
-//! support for common extensions:
+//! let problem = Problem::internal_server_error()
+//!     .with_cause(std::io::Error::new(std::io::ErrorKind::Other, "db timeout"));
 //!
-//! - **`code`**: A stable error code string for client consumption.
-//! - **`errors`**: A list of field-level validation errors.
-//! - **`trace_id`** / **`request_id`**: Correlation identifiers.
+//! let json = serde_json::to_string(&problem).unwrap();
+//! assert!(!json.contains("db timeout")); // never leaked
+//! ```
 //!
-//! You can also add arbitrary extensions via [`Problem::with_extension`].
+//! # Validation Errors
+//!
+//! ```
+//! use problem_details::Problem;
+//!
+//! let problem = Problem::validation()
+//!     .push_error("email", "must be a valid email address")
+//!     .push_error_code("name", "is required", "REQUIRED");
+//!
+//! let json = serde_json::to_value(&problem).unwrap();
+//! assert_eq!(json["status"], 422);
+//! assert!(json["errors"].is_array());
+//! ```
 
 mod problem;
 mod traits;
@@ -46,7 +60,7 @@ mod axum_impl;
 
 pub use problem::Problem;
 pub use traits::IntoProblem;
-pub use validation::ValidationError;
+pub use validation::ValidationItem;
 
 /// The `Content-Type` header value for RFC 7807 problem responses.
 pub const APPLICATION_PROBLEM_JSON: &str = "application/problem+json";

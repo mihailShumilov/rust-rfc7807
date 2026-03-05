@@ -1,11 +1,11 @@
 use axum::extract::Json;
 use axum::routing::{get, post};
 use axum::Router;
-use problem_details::{IntoProblem, Problem, ValidationError};
+use problem_details::{IntoProblem, Problem};
 use problem_details_axum::ApiError;
 use serde::{Deserialize, Serialize};
 
-// --- Domain types ---
+// -- Domain types --
 
 #[derive(Serialize)]
 struct OkResponse {
@@ -18,7 +18,7 @@ struct CreateUserRequest {
     name: Option<String>,
 }
 
-// --- Domain errors ---
+// -- Domain errors --
 
 enum AppError {
     NotFound { resource: String },
@@ -26,26 +26,24 @@ enum AppError {
 }
 
 impl IntoProblem for AppError {
-    fn to_problem(&self) -> Problem {
+    fn into_problem(self) -> Problem {
         match self {
             AppError::NotFound { resource } => Problem::not_found()
-                .with_title("Resource not found")
-                .with_detail(format!("{resource} does not exist"))
-                .with_code("RESOURCE_NOT_FOUND"),
-            AppError::InternalFailure(msg) => {
-                Problem::internal_server_error().with_internal_cause(msg.clone())
-            }
+                .title("Resource not found")
+                .detail(format!("{resource} does not exist"))
+                .code("RESOURCE_NOT_FOUND"),
+            AppError::InternalFailure(msg) => Problem::internal_server_error().with_cause_str(msg),
         }
     }
 }
 
 impl From<AppError> for ApiError {
     fn from(err: AppError) -> Self {
-        ApiError::from_domain(&err)
+        ApiError::from_domain(err)
     }
 }
 
-// --- Handlers ---
+// -- Handlers --
 
 async fn ok_handler() -> Json<OkResponse> {
     Json(OkResponse {
@@ -63,22 +61,20 @@ async fn not_found_handler() -> Result<Json<()>, ApiError> {
 async fn validate_handler(
     Json(body): Json<CreateUserRequest>,
 ) -> Result<Json<OkResponse>, ApiError> {
-    let mut errors = Vec::new();
+    let mut problem = Problem::validation();
+    let mut has_errors = false;
 
     if body.email.as_ref().map_or(true, |e| e.is_empty()) {
-        errors.push(ValidationError::new("email", "is required").with_code("REQUIRED"));
+        problem = problem.push_error_code("email", "is required", "REQUIRED");
+        has_errors = true;
     }
     if body.name.as_ref().map_or(true, |n| n.is_empty()) {
-        errors.push(ValidationError::new("name", "is required").with_code("REQUIRED"));
+        problem = problem.push_error_code("name", "is required", "REQUIRED");
+        has_errors = true;
     }
 
-    if !errors.is_empty() {
-        return Err(ApiError::from(
-            Problem::unprocessable_entity()
-                .with_title("Validation Failed")
-                .with_code("VALIDATION_ERROR")
-                .with_errors(errors),
-        ));
+    if has_errors {
+        return Err(problem.code("VALIDATION_ERROR").into());
     }
 
     Ok(Json(OkResponse {
@@ -86,9 +82,9 @@ async fn validate_handler(
     }))
 }
 
-async fn error_handler() -> Result<Json<()>, ApiError> {
+async fn internal_handler() -> Result<Json<()>, ApiError> {
     Err(AppError::InternalFailure(
-        "connection to db.internal:5432 refused — password=hunter2".into(),
+        "connection to db.internal:5432 refused -- password=hunter2".into(),
     )
     .into())
 }
@@ -99,5 +95,5 @@ pub fn app() -> Router {
         .route("/ok", get(ok_handler))
         .route("/not-found", get(not_found_handler))
         .route("/validate", post(validate_handler))
-        .route("/panic-or-error", get(error_handler))
+        .route("/internal", get(internal_handler))
 }

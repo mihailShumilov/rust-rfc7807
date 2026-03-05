@@ -1,12 +1,13 @@
-use axum::response::{IntoResponse, Response};
+use axum_core::response::{IntoResponse, Response};
 use problem_details::{IntoProblem, Problem};
 use std::fmt;
 
-/// A wrapper error type that converts into an RFC 7807 Problem response.
+/// An error type for Axum handlers that produces RFC 7807 Problem responses.
 ///
-/// `ApiError` can wrap either an explicit [`Problem`] or an opaque boxed error.
-/// Unknown errors are automatically converted into safe 500 responses that do
-/// **not** leak internal details.
+/// `ApiError` is an enum with two variants:
+/// - [`ApiError::Problem`] wraps an explicit [`Problem`] response.
+/// - [`ApiError::Internal`] wraps an opaque error, producing a safe 500 response
+///   that never leaks internal details.
 ///
 /// # Usage with `Result`
 ///
@@ -15,8 +16,7 @@ use std::fmt;
 /// use problem_details_axum::ApiError;
 ///
 /// async fn handler() -> Result<String, ApiError> {
-///     // Explicit problem
-///     Err(ApiError::from(Problem::not_found()))
+///     Err(Problem::not_found().title("Not Found").into())
 /// }
 /// ```
 ///
@@ -30,59 +30,67 @@ use std::fmt;
 ///     Ok(value.to_string())
 /// }
 /// ```
-pub struct ApiError {
-    problem: Problem,
+pub enum ApiError {
+    /// An explicit problem response.
+    Problem(Problem),
+    /// An opaque internal error that will be converted to a safe 500 response.
+    Internal(Box<dyn std::error::Error + Send + Sync>),
 }
 
 impl ApiError {
     /// Create an `ApiError` from an explicit [`Problem`].
     pub fn from_problem(problem: Problem) -> Self {
-        Self { problem }
+        Self::Problem(problem)
     }
 
-    /// Create a safe 500 `ApiError` from any error, storing the original
-    /// error message as an internal cause (never serialized).
-    pub fn internal(err: impl fmt::Display) -> Self {
-        Self {
-            problem: Problem::internal_server_error().with_internal_cause(err.to_string()),
-        }
+    /// Create a safe 500 `ApiError` from any error.
+    ///
+    /// The original error is stored as the internal cause and never exposed
+    /// in the response body.
+    pub fn internal(err: impl std::error::Error + Send + Sync + 'static) -> Self {
+        Self::Internal(Box::new(err))
     }
 
-    /// Create an `ApiError` from a domain error that implements [`IntoProblem`].
-    pub fn from_domain(err: &impl IntoProblem) -> Self {
-        Self {
-            problem: err.to_problem(),
-        }
-    }
-
-    /// Returns a reference to the underlying [`Problem`].
-    pub fn problem(&self) -> &Problem {
-        &self.problem
+    /// Create an `ApiError` from a domain error implementing [`IntoProblem`].
+    pub fn from_domain(err: impl IntoProblem) -> Self {
+        Self::Problem(err.into_problem())
     }
 }
 
 impl From<Problem> for ApiError {
     fn from(problem: Problem) -> Self {
-        Self::from_problem(problem)
+        Self::Problem(problem)
     }
 }
 
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
-        self.problem.into_response()
+        match self {
+            ApiError::Problem(problem) => problem.into_response(),
+            ApiError::Internal(err) => Problem::internal_server_error()
+                .with_cause_str(err.to_string())
+                .into_response(),
+        }
     }
 }
 
 impl fmt::Debug for ApiError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("ApiError")
-            .field("problem", &self.problem)
-            .finish()
+        match self {
+            ApiError::Problem(p) => f.debug_tuple("ApiError::Problem").field(p).finish(),
+            ApiError::Internal(e) => f
+                .debug_tuple("ApiError::Internal")
+                .field(&e.to_string())
+                .finish(),
+        }
     }
 }
 
 impl fmt::Display for ApiError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.problem)
+        match self {
+            ApiError::Problem(p) => write!(f, "{p}"),
+            ApiError::Internal(e) => write!(f, "Internal error: {e}"),
+        }
     }
 }

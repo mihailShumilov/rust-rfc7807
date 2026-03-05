@@ -13,6 +13,10 @@ async fn response_json(response: axum::response::Response) -> serde_json::Value 
     serde_json::from_slice(&bytes).unwrap()
 }
 
+// ---------------------------------------------------------------------------
+// /ok returns 200
+// ---------------------------------------------------------------------------
+
 #[tokio::test]
 async fn ok_returns_200() {
     let response = app()
@@ -22,6 +26,10 @@ async fn ok_returns_200() {
 
     assert_eq!(response.status(), StatusCode::OK);
 }
+
+// ---------------------------------------------------------------------------
+// /not-found returns 404 problem+json
+// ---------------------------------------------------------------------------
 
 #[tokio::test]
 async fn not_found_returns_404_problem() {
@@ -41,6 +49,10 @@ async fn not_found_returns_404_problem() {
     assert_eq!(json["code"], "RESOURCE_NOT_FOUND");
     assert!(json["detail"].as_str().unwrap().contains("User 42"));
 }
+
+// ---------------------------------------------------------------------------
+// /validate returns 422 with errors array
+// ---------------------------------------------------------------------------
 
 #[tokio::test]
 async fn validate_returns_422_with_errors() {
@@ -63,6 +75,7 @@ async fn validate_returns_422_with_errors() {
     let json = response_json(response).await;
     assert_eq!(json["status"], 422);
     assert_eq!(json["code"], "VALIDATION_ERROR");
+    assert_eq!(json["type"], "validation_error");
 
     let errors = json["errors"].as_array().expect("errors should be array");
     assert_eq!(errors.len(), 2);
@@ -70,10 +83,14 @@ async fn validate_returns_422_with_errors() {
     assert_eq!(errors[1]["field"], "name");
 }
 
+// ---------------------------------------------------------------------------
+// /internal returns 500 and does NOT leak internal error message
+// ---------------------------------------------------------------------------
+
 #[tokio::test]
-async fn error_returns_safe_500_without_leaking() {
+async fn internal_returns_safe_500_without_leaking() {
     let response = app()
-        .oneshot(Request::get("/panic-or-error").body(Body::empty()).unwrap())
+        .oneshot(Request::get("/internal").body(Body::empty()).unwrap())
         .await
         .unwrap();
 
