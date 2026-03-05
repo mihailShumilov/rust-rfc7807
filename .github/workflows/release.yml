@@ -1,40 +1,32 @@
 name: Release
 
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
 
 permissions:
   contents: write
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  ci:
-    name: CI checks
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo fmt --all -- --check
-      - run: cargo clippy --all-targets --all-features -- -D warnings
-      - run: cargo test --workspace --all-features
-      - run: RUSTDOCFLAGS="-Dwarnings" cargo doc --workspace --no-deps
-
   release:
     name: Bump version, tag, publish
     runs-on: ubuntu-latest
-    needs: [ci]
-    if: "!contains(github.event.head_commit.message, '[skip release]')"
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      !contains(github.event.workflow_run.head_commit.message, '[skip release]')
     environment: crates-io
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: dtolnay/rust-toolchain@stable
@@ -46,8 +38,9 @@ jobs:
 
       - name: Determine bump type
         id: bump
+        env:
+          COMMIT_MSG: ${{ github.event.workflow_run.head_commit.message }}
         run: |
-          COMMIT_MSG="${{ github.event.head_commit.message }}"
           if echo "$COMMIT_MSG" | grep -qi '\[major\]'; then
             echo "type=major" >> "$GITHUB_OUTPUT"
           elif echo "$COMMIT_MSG" | grep -qi '\[minor\]'; then
@@ -71,6 +64,7 @@ jobs:
             major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
             minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
             patch) PATCH=$((PATCH + 1)) ;;
+            *) echo "::error::Unknown bump type: ${{ steps.bump.outputs.type }}"; exit 1 ;;
           esac
           NEXT="${MAJOR}.${MINOR}.${PATCH}"
           echo "version=$NEXT" >> "$GITHUB_OUTPUT"
@@ -93,11 +87,11 @@ jobs:
           sed -i "s/rust-rfc7807 = { version = \"${OLD_VERSION}\"/rust-rfc7807 = { version = \"${NEW_VERSION}\"/" \
             crates/problem-details-axum/Cargo.toml
 
-      - name: Update Cargo.lock
-        run: cargo update --workspace
+      - name: Update lockfile
+        run: cargo update -p rust-rfc7807 -p rust-rfc7807-axum
 
       - name: Verify build
-        run: cargo test --workspace --all-features
+        run: cargo check --workspace --all-features
 
       - name: Commit version bump
         env:
@@ -127,9 +121,6 @@ jobs:
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: cargo publish -p rust-rfc7807
-
-      - name: Wait for crates.io index update
-        run: sleep 30
 
       - name: Publish rust-rfc7807-axum to crates.io
         env:

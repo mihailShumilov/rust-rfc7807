@@ -5,7 +5,6 @@ on:
     branches: [main]
   pull_request:
 
-# Skip CI for automated version bump commits
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
