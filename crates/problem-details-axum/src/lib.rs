@@ -1,4 +1,4 @@
-//! # problem-details-axum
+//! # rust-rfc7807-axum
 //!
 //! [Axum](https://docs.rs/axum) integration for
 //! [RFC 7807 Problem Details](https://www.rfc-editor.org/rfc/rfc7807).
@@ -10,8 +10,8 @@
 //!
 //! ```rust,ignore
 //! use axum::{routing::get, Router};
-//! use problem_details::Problem;
-//! use problem_details_axum::ApiError;
+//! use rust_rfc7807::Problem;
+//! use rust_rfc7807_axum::ApiError;
 //!
 //! async fn handler() -> Result<String, ApiError> {
 //!     Err(Problem::not_found().title("Not Found").into())
@@ -31,7 +31,7 @@ pub use api_error::ApiError;
 pub use trace::attach_trace;
 
 // Re-export core types for convenience.
-pub use problem_details::{IntoProblem, Problem, ValidationItem, APPLICATION_PROBLEM_JSON};
+pub use rust_rfc7807::{IntoProblem, Problem, ValidationItem, APPLICATION_PROBLEM_JSON};
 
 #[cfg(test)]
 mod tests;

@@ -1,5 +1,5 @@
 use axum_core::response::{IntoResponse, Response};
-use problem_details::{IntoProblem, Problem};
+use rust_rfc7807::{IntoProblem, Problem};
 use std::fmt;
 
 /// An error type for Axum handlers that produces RFC 7807 Problem responses.
@@ -12,8 +12,8 @@ use std::fmt;
 /// # Usage with `Result`
 ///
 /// ```rust,no_run
-/// use problem_details::Problem;
-/// use problem_details_axum::ApiError;
+/// use rust_rfc7807::Problem;
+/// use rust_rfc7807_axum::ApiError;
 ///
 /// async fn handler() -> Result<String, ApiError> {
 ///     Err(Problem::not_found().title("Not Found").into())
@@ -23,7 +23,7 @@ use std::fmt;
 /// # Converting unknown errors
 ///
 /// ```rust,no_run
-/// use problem_details_axum::ApiError;
+/// use rust_rfc7807_axum::ApiError;
 ///
 /// async fn handler() -> Result<String, ApiError> {
 ///     let value: i32 = "not a number".parse().map_err(ApiError::internal)?;

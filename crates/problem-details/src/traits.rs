@@ -8,7 +8,7 @@ use crate::Problem;
 /// # Example
 ///
 /// ```
-/// use problem_details::{IntoProblem, Problem};
+/// use rust_rfc7807::{IntoProblem, Problem};
 ///
 /// enum AppError {
 ///     UserNotFound(u64),

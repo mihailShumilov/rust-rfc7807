@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 /// # Example
 ///
 /// ```
-/// use problem_details::ValidationItem;
+/// use rust_rfc7807::ValidationItem;
 ///
 /// let item = ValidationItem::new("email", "must be a valid email address")
 ///     .code("INVALID_EMAIL");

@@ -1,11 +1,11 @@
-# problem-details
+# rust-rfc7807
 
 **RFC 7807 Problem Details for HTTP APIs in Rust.**
 
-[![Crates.io](https://img.shields.io/crates/v/problem-details.svg)](https://crates.io/crates/problem-details)
-[![Documentation](https://docs.rs/problem-details/badge.svg)](https://docs.rs/problem-details)
+[![Crates.io](https://img.shields.io/crates/v/rust-rfc7807.svg)](https://crates.io/crates/rust-rfc7807)
+[![Documentation](https://docs.rs/rust-rfc7807/badge.svg)](https://docs.rs/rust-rfc7807)
 [![CI](https://github.com/example/problem-details-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/example/problem-details-rs/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/crates/l/problem-details.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/crates/l/rust-rfc7807.svg)](LICENSE)
 
 ## Overview
 
@@ -13,7 +13,7 @@
 format for HTTP API error responses. Instead of every service inventing its own error shape, clients
 get a consistent, predictable structure they can parse and act on.
 
-`problem-details` provides a lightweight Rust implementation with an ergonomic builder API,
+`rust-rfc7807` provides a lightweight Rust implementation with an ergonomic builder API,
 safe defaults that prevent leaking internal details in 500 responses, and first-class Axum integration.
 
 ## Features
@@ -32,8 +32,8 @@ safe defaults that prevent leaking internal details in 500 responses, and first-
 
 | Crate | Description |
 |---|---|
-| [`problem-details`](crates/problem-details) | Core `Problem` type, builder, traits, serialization |
-| [`problem-details-axum`](crates/problem-details-axum) | Axum `IntoResponse`, `ApiError` wrapper, trace helpers |
+| [`rust-rfc7807`](crates/problem-details) | Core `Problem` type, builder, traits, serialization |
+| [`rust-rfc7807-axum`](crates/problem-details-axum) | Axum `IntoResponse`, `ApiError` wrapper, trace helpers |
 
 ## Example Responses
 
@@ -84,15 +84,15 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-problem-details-axum = "0.1"
+rust-rfc7807-axum = "0.1"
 ```
 
 Define a handler that returns `Result<T, ApiError>`:
 
 ```rust,ignore
 use axum::{routing::get, Router};
-use problem_details::Problem;
-use problem_details_axum::ApiError;
+use rust_rfc7807::Problem;
+use rust_rfc7807_axum::ApiError;
 
 async fn get_user() -> Result<String, ApiError> {
     Err(Problem::not_found()
@@ -117,7 +117,7 @@ The response will have status `404`, content type `application/problem+json`, an
 Use status constructors and the builder API:
 
 ```rust
-use problem_details::Problem;
+use rust_rfc7807::Problem;
 
 // 404 with all fields
 let problem = Problem::not_found()
@@ -146,7 +146,7 @@ let _ = Problem::internal_server_error(); // 500 with safe defaults
 Implement the `IntoProblem` trait on your application's error types:
 
 ```rust
-use problem_details::{IntoProblem, Problem};
+use rust_rfc7807::{IntoProblem, Problem};
 
 enum AppError {
     UserNotFound(u64),
@@ -174,7 +174,7 @@ impl IntoProblem for AppError {
 Use `Problem::validation()` with `push_error` and `push_error_code`:
 
 ```rust
-use problem_details::Problem;
+use rust_rfc7807::Problem;
 
 let problem = Problem::validation()
     .push_error_code("email", "must be a valid email address", "INVALID_EMAIL")
@@ -206,7 +206,7 @@ This crate prevents that by design:
 - `ApiError::internal()` wraps any error into a safe 500 response automatically.
 
 ```rust
-use problem_details::Problem;
+use rust_rfc7807::Problem;
 
 let problem = Problem::internal_server_error()
     .with_cause(std::io::Error::other("connection to db:5432 refused"));
@@ -225,7 +225,7 @@ assert!(cause.to_string().contains("db:5432"));
 
 ### Axum (available now)
 
-`problem-details-axum` provides:
+`rust-rfc7807-axum` provides:
 
 - `IntoResponse` for `Problem` (sets status code + content type)
 - `ApiError` enum for use in `Result<T, ApiError>` handler return types

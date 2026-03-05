@@ -1,8 +1,8 @@
 use axum::extract::Json;
 use axum::routing::{get, post};
 use axum::Router;
-use problem_details::{IntoProblem, Problem};
-use problem_details_axum::ApiError;
+use rust_rfc7807::{IntoProblem, Problem};
+use rust_rfc7807_axum::ApiError;
 use serde::{Deserialize, Serialize};
 
 // -- Domain types --

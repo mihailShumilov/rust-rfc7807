@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `problem-details` core crate (v0.1.0):
+- `rust-rfc7807` core crate (v0.1.0):
   - RFC 7807 `Problem` type with builder API.
   - Extension fields via `serde_json::Map<String, Value>`.
   - `ValidationItem` struct and `Problem::validation()` constructor.
@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `.with_cause()` for attaching `dyn Error` causes.
   - `IntoProblem` trait for domain error mapping.
   - `APPLICATION_PROBLEM_JSON` content-type constant.
-- `problem-details-axum` integration crate (v0.1.0):
+- `rust-rfc7807-axum` integration crate (v0.1.0):
   - `IntoResponse` implementation for `Problem`.
   - `ApiError` enum with safe 500 handling.
   - `attach_trace()` helper.

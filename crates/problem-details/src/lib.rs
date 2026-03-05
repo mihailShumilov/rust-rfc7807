@@ -1,4 +1,4 @@
-//! # problem-details
+//! # rust-rfc7807
 //!
 //! [RFC 7807](https://www.rfc-editor.org/rfc/rfc7807) Problem Details for HTTP APIs.
 //!
@@ -9,7 +9,7 @@
 //! # Quick Start
 //!
 //! ```
-//! use problem_details::Problem;
+//! use rust_rfc7807::Problem;
 //!
 //! let problem = Problem::not_found()
 //!     .title("User not found")
@@ -28,7 +28,7 @@
 //! error that is **never serialized**.
 //!
 //! ```
-//! use problem_details::Problem;
+//! use rust_rfc7807::Problem;
 //!
 //! let problem = Problem::internal_server_error()
 //!     .with_cause(std::io::Error::new(std::io::ErrorKind::Other, "db timeout"));
@@ -40,7 +40,7 @@
 //! # Validation Errors
 //!
 //! ```
-//! use problem_details::Problem;
+//! use rust_rfc7807::Problem;
 //!
 //! let problem = Problem::validation()
 //!     .push_error("email", "must be a valid email address")

@@ -20,7 +20,7 @@ use crate::ValidationItem;
 /// # Example
 ///
 /// ```
-/// use problem_details::Problem;
+/// use rust_rfc7807::Problem;
 ///
 /// let problem = Problem::bad_request()
 ///     .title("Invalid input")
@@ -106,7 +106,7 @@ impl Problem {
     /// Create a new problem with the given HTTP status code.
     ///
     /// ```
-    /// use problem_details::Problem;
+    /// use rust_rfc7807::Problem;
     ///
     /// let p = Problem::new(429).title("Too Many Requests");
     /// assert_eq!(p.status, Some(429));
@@ -155,7 +155,7 @@ impl Problem {
     /// and [`push_error_code`](Self::push_error_code).
     ///
     /// ```
-    /// use problem_details::Problem;
+    /// use rust_rfc7807::Problem;
     ///
     /// let p = Problem::validation()
     ///     .push_error("email", "is required");

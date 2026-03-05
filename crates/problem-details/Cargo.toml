@@ -1,12 +1,12 @@
 [package]
-name = "problem-details"
+name = "rust-rfc7807"
 version = "0.1.0"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 description = "RFC 7807 Problem Details for HTTP APIs — lightweight, safe, ergonomic"
-documentation = "https://docs.rs/problem-details"
+documentation = "https://docs.rs/rust-rfc7807"
 readme = "../../README.md"
 keywords = ["rfc7807", "problem-details", "http", "api", "errors"]
 categories = ["web-programming", "network-programming"]

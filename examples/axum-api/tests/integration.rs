@@ -1,7 +1,7 @@
 use axum::body::Body;
 use axum::http::{self, Request, StatusCode};
 use http_body_util::BodyExt;
-use problem_details::APPLICATION_PROBLEM_JSON;
+use rust_rfc7807::APPLICATION_PROBLEM_JSON;
 use tower::ServiceExt;
 
 fn app() -> axum::Router {

@@ -1,6 +1,6 @@
 use axum_core::response::IntoResponse;
 use http::header;
-use problem_details::{Problem, APPLICATION_PROBLEM_JSON};
+use rust_rfc7807::{Problem, APPLICATION_PROBLEM_JSON};
 
 use crate::{attach_trace, ApiError};
 
@@ -90,7 +90,7 @@ fn api_error_from_problem() {
 
 #[test]
 fn api_error_from_domain() {
-    use problem_details::IntoProblem;
+    use rust_rfc7807::IntoProblem;
 
     struct MyError;
     impl IntoProblem for MyError {
