@@ -1,0 +1,28 @@
+[package]
+name = "axum-api"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+problem-details = { path = "../../crates/problem-details" }
+problem-details-axum = { path = "../../crates/problem-details-axum" }
+axum = "0.8"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+
+[lib]
+name = "axum_api"
+path = "src/lib.rs"
+
+[[bin]]
+name = "axum-api"
+path = "src/main.rs"
+
+[dev-dependencies]
+http = "1"
+http-body-util = "0.1"
+tower = { version = "0.5", features = ["util"] }

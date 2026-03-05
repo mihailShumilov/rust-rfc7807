@@ -1,0 +1,13 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/problem-details",
+    "crates/problem-details-axum",
+    "examples/axum-api",
+]
+
+[workspace.package]
+edition = "2021"
+rust-version = "1.75"
+license = "MIT"
+repository = "https://github.com/example/problem-details-rs"
