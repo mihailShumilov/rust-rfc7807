@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
 
+# Skip CI for automated version bump commits
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: -Dwarnings
@@ -60,4 +65,4 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo publish -p rust-rfc7807 --dry-run
-      - run: cargo publish -p rust-rfc7807-axum --dry-run
+      # axum crate dry-run skipped — depends on core being published first

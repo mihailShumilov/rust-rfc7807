@@ -2,38 +2,15 @@ name: Release
 
 on:
   push:
-    tags:
-      - "v*"
+    branches: [main]
+
+permissions:
+  contents: write
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  validate-tag:
-    name: Validate tag matches crate versions
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Extract tag version
-        id: tag
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-      - name: Check rust-rfc7807 version
-        run: |
-          CRATE_VERSION=$(cargo metadata --no-deps --format-version=1 \
-            | jq -r '.packages[] | select(.name == "rust-rfc7807") | .version')
-          if [ "$CRATE_VERSION" != "${{ steps.tag.outputs.version }}" ]; then
-            echo "::error::Tag v${{ steps.tag.outputs.version }} does not match rust-rfc7807 version $CRATE_VERSION"
-            exit 1
-          fi
-      - name: Check rust-rfc7807-axum version
-        run: |
-          CRATE_VERSION=$(cargo metadata --no-deps --format-version=1 \
-            | jq -r '.packages[] | select(.name == "rust-rfc7807-axum") | .version')
-          if [ "$CRATE_VERSION" != "${{ steps.tag.outputs.version }}" ]; then
-            echo "::error::Tag v${{ steps.tag.outputs.version }} does not match rust-rfc7807-axum version $CRATE_VERSION"
-            exit 1
-          fi
-
   ci:
     name: CI checks
     runs-on: ubuntu-latest
@@ -46,23 +23,115 @@ jobs:
       - run: cargo fmt --all -- --check
       - run: cargo clippy --all-targets --all-features -- -D warnings
       - run: cargo test --workspace --all-features
-      - run: cargo doc --workspace --no-deps
+      - run: RUSTDOCFLAGS="-Dwarnings" cargo doc --workspace --no-deps
 
-  publish:
-    name: Publish to crates.io
+  release:
+    name: Bump version, tag, publish
     runs-on: ubuntu-latest
-    needs: [validate-tag, ci]
+    needs: [ci]
+    if: "!contains(github.event.head_commit.message, '[skip release]')"
     environment: crates-io
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - uses: dtolnay/rust-toolchain@stable
-      - name: Publish rust-rfc7807
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Determine bump type
+        id: bump
+        run: |
+          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          if echo "$COMMIT_MSG" | grep -qi '\[major\]'; then
+            echo "type=major" >> "$GITHUB_OUTPUT"
+          elif echo "$COMMIT_MSG" | grep -qi '\[minor\]'; then
+            echo "type=minor" >> "$GITHUB_OUTPUT"
+          else
+            echo "type=patch" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Read current version
+        id: current
+        run: |
+          VERSION=$(cargo metadata --no-deps --format-version=1 \
+            | jq -r '.packages[] | select(.name == "rust-rfc7807") | .version')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Calculate next version
+        id: next
+        run: |
+          IFS='.' read -r MAJOR MINOR PATCH <<< "${{ steps.current.outputs.version }}"
+          case "${{ steps.bump.outputs.type }}" in
+            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+            patch) PATCH=$((PATCH + 1)) ;;
+          esac
+          NEXT="${MAJOR}.${MINOR}.${PATCH}"
+          echo "version=$NEXT" >> "$GITHUB_OUTPUT"
+          echo "Bumping ${{ steps.current.outputs.version }} -> $NEXT (${{ steps.bump.outputs.type }})"
+
+      - name: Update versions in Cargo.toml files
+        env:
+          OLD_VERSION: ${{ steps.current.outputs.version }}
+          NEW_VERSION: ${{ steps.next.outputs.version }}
+        run: |
+          # Core crate version
+          sed -i "s/^version = \"${OLD_VERSION}\"/version = \"${NEW_VERSION}\"/" \
+            crates/problem-details/Cargo.toml
+
+          # Axum crate version
+          sed -i "s/^version = \"${OLD_VERSION}\"/version = \"${NEW_VERSION}\"/" \
+            crates/problem-details-axum/Cargo.toml
+
+          # Axum crate dependency on core
+          sed -i "s/rust-rfc7807 = { version = \"${OLD_VERSION}\"/rust-rfc7807 = { version = \"${NEW_VERSION}\"/" \
+            crates/problem-details-axum/Cargo.toml
+
+      - name: Update Cargo.lock
+        run: cargo update --workspace
+
+      - name: Verify build
+        run: cargo test --workspace --all-features
+
+      - name: Commit version bump
+        env:
+          NEW_VERSION: ${{ steps.next.outputs.version }}
+        run: |
+          git add -A
+          git commit -m "chore: bump version to ${NEW_VERSION} [skip release]"
+          git push
+
+      - name: Create tag
+        env:
+          NEW_VERSION: ${{ steps.next.outputs.version }}
+        run: |
+          git tag "v${NEW_VERSION}"
+          git push origin "v${NEW_VERSION}"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEW_VERSION: ${{ steps.next.outputs.version }}
+        run: |
+          gh release create "v${NEW_VERSION}" \
+            --title "v${NEW_VERSION}" \
+            --generate-notes
+
+      - name: Publish rust-rfc7807 to crates.io
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: cargo publish -p rust-rfc7807 --locked
+        run: cargo publish -p rust-rfc7807
+
       - name: Wait for crates.io index update
         run: sleep 30
-      - name: Publish rust-rfc7807-axum
+
+      - name: Publish rust-rfc7807-axum to crates.io
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: cargo publish -p rust-rfc7807-axum --locked
+        run: cargo publish -p rust-rfc7807-axum
