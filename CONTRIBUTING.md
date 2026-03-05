@@ -1,6 +1,6 @@
 # Contributing
 
-Thank you for considering contributing to problem-details-rs!
+Thank you for considering contributing to rust-rfc7807!
 
 ## Getting Started
 

@@ -77,15 +77,15 @@ jobs:
         run: |
           # Core crate version
           sed -i "s/^version = \"${OLD_VERSION}\"/version = \"${NEW_VERSION}\"/" \
-            crates/problem-details/Cargo.toml
+            crates/rust-rfc7807/Cargo.toml
 
           # Axum crate version
           sed -i "s/^version = \"${OLD_VERSION}\"/version = \"${NEW_VERSION}\"/" \
-            crates/problem-details-axum/Cargo.toml
+            crates/rust-rfc7807-axum/Cargo.toml
 
           # Axum crate dependency on core
           sed -i "s/rust-rfc7807 = { version = \"${OLD_VERSION}\"/rust-rfc7807 = { version = \"${NEW_VERSION}\"/" \
-            crates/problem-details-axum/Cargo.toml
+            crates/rust-rfc7807-axum/Cargo.toml
 
       - name: Update lockfile
         run: cargo update -p rust-rfc7807 -p rust-rfc7807-axum

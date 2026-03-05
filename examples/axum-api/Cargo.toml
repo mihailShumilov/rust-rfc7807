@@ -15,8 +15,8 @@ name = "axum-api"
 path = "src/main.rs"
 
 [dependencies]
-rust-rfc7807 = { path = "../../crates/problem-details" }
-rust-rfc7807-axum = { path = "../../crates/problem-details-axum" }
+rust-rfc7807 = { path = "../../crates/rust-rfc7807" }
+rust-rfc7807-axum = { path = "../../crates/rust-rfc7807-axum" }
 axum = "0.8"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

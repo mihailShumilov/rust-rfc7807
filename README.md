@@ -4,7 +4,7 @@
 
 [![Crates.io](https://img.shields.io/crates/v/rust-rfc7807.svg)](https://crates.io/crates/rust-rfc7807)
 [![Documentation](https://docs.rs/rust-rfc7807/badge.svg)](https://docs.rs/rust-rfc7807)
-[![CI](https://github.com/example/problem-details-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/example/problem-details-rs/actions/workflows/ci.yml)
+[![CI](https://github.com/mihailShumilov/rust-rfc7807/actions/workflows/ci.yml/badge.svg)](https://github.com/mihailShumilov/rust-rfc7807/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/crates/l/rust-rfc7807.svg)](LICENSE)
 
 ## Overview
@@ -32,8 +32,8 @@ safe defaults that prevent leaking internal details in 500 responses, and first-
 
 | Crate | Description |
 |---|---|
-| [`rust-rfc7807`](crates/problem-details) | Core `Problem` type, builder, traits, serialization |
-| [`rust-rfc7807-axum`](crates/problem-details-axum) | Axum `IntoResponse`, `ApiError` wrapper, trace helpers |
+| [`rust-rfc7807`](crates/rust-rfc7807) | Core `Problem` type, builder, traits, serialization |
+| [`rust-rfc7807-axum`](crates/rust-rfc7807-axum) | Axum `IntoResponse`, `ApiError` wrapper, trace helpers |
 
 ## Example Responses
 
@@ -256,6 +256,10 @@ assert!(cause.to_string().contains("db:5432"));
 ## MSRV
 
 Minimum supported Rust version: **1.75**.
+
+## Author
+
+[Mykhailo Shumilov](https://www.linkedin.com/in/michael-shumilov-46453737/)
 
 ## License
 

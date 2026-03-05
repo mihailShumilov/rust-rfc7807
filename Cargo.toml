@@ -1,8 +1,8 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/problem-details",
-    "crates/problem-details-axum",
+    "crates/rust-rfc7807",
+    "crates/rust-rfc7807-axum",
     "examples/axum-api",
 ]
 
@@ -10,4 +10,5 @@ members = [
 edition = "2021"
 rust-version = "1.75"
 license = "MIT"
-repository = "https://github.com/example/problem-details-rs"
+authors = ["Mykhailo Shumilov"]
+repository = "https://github.com/mihailShumilov/rust-rfc7807"

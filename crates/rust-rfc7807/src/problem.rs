@@ -105,16 +105,21 @@ impl std::error::Error for StringError {}
 impl Problem {
     /// Create a new problem with the given HTTP status code.
     ///
+    /// Per RFC 7807 §4.2, when no `type` is set the problem type defaults
+    /// to `"about:blank"`, and the `title` SHOULD match the HTTP status
+    /// phrase. This constructor sets the title automatically.
+    ///
     /// ```
     /// use rust_rfc7807::Problem;
     ///
-    /// let p = Problem::new(429).title("Too Many Requests");
+    /// let p = Problem::new(429);
     /// assert_eq!(p.status, Some(429));
+    /// assert_eq!(p.title.as_deref(), Some("Too Many Requests"));
     /// ```
     pub fn new(status: u16) -> Self {
         Self {
             type_uri: None,
-            title: None,
+            title: status_phrase(status).map(String::from),
             status: Some(status),
             detail: None,
             instance: None,
@@ -338,6 +343,21 @@ impl Problem {
 // ---------------------------------------------------------------------------
 
 impl Problem {
+    /// The default problem type URI per RFC 7807 §4.2.
+    ///
+    /// When the `"type"` member is absent, its value is assumed to be
+    /// `"about:blank"`, indicating that the problem has no additional
+    /// semantics beyond the HTTP status code.
+    pub const ABOUT_BLANK: &'static str = "about:blank";
+
+    /// Returns the effective problem type URI.
+    ///
+    /// Returns the `"type"` value if set, or [`ABOUT_BLANK`](Self::ABOUT_BLANK)
+    /// per RFC 7807 §4.2 when absent.
+    pub fn get_type(&self) -> &str {
+        self.type_uri.as_deref().unwrap_or(Self::ABOUT_BLANK)
+    }
+
     /// Returns the HTTP status code, defaulting to 500 if not set.
     pub fn status_code(&self) -> u16 {
         self.status.unwrap_or(500)
@@ -412,5 +432,56 @@ impl std::error::Error for Problem {
         self.cause
             .as_ref()
             .map(|c| c.source.as_ref() as &(dyn std::error::Error + 'static))
+    }
+}
+
+// ---------------------------------------------------------------------------
+// HTTP status phrase lookup (RFC 7231 / 6585 / 9110)
+// ---------------------------------------------------------------------------
+
+/// Returns the standard HTTP reason phrase for common status codes.
+fn status_phrase(status: u16) -> Option<&'static str> {
+    match status {
+        400 => Some("Bad Request"),
+        401 => Some("Unauthorized"),
+        402 => Some("Payment Required"),
+        403 => Some("Forbidden"),
+        404 => Some("Not Found"),
+        405 => Some("Method Not Allowed"),
+        406 => Some("Not Acceptable"),
+        407 => Some("Proxy Authentication Required"),
+        408 => Some("Request Timeout"),
+        409 => Some("Conflict"),
+        410 => Some("Gone"),
+        411 => Some("Length Required"),
+        412 => Some("Precondition Failed"),
+        413 => Some("Content Too Large"),
+        414 => Some("URI Too Long"),
+        415 => Some("Unsupported Media Type"),
+        416 => Some("Range Not Satisfiable"),
+        417 => Some("Expectation Failed"),
+        418 => Some("I'm a Teapot"),
+        421 => Some("Misdirected Request"),
+        422 => Some("Unprocessable Content"),
+        423 => Some("Locked"),
+        424 => Some("Failed Dependency"),
+        425 => Some("Too Early"),
+        426 => Some("Upgrade Required"),
+        428 => Some("Precondition Required"),
+        429 => Some("Too Many Requests"),
+        431 => Some("Request Header Fields Too Large"),
+        451 => Some("Unavailable For Legal Reasons"),
+        500 => Some("Internal Server Error"),
+        501 => Some("Not Implemented"),
+        502 => Some("Bad Gateway"),
+        503 => Some("Service Unavailable"),
+        504 => Some("Gateway Timeout"),
+        505 => Some("HTTP Version Not Supported"),
+        506 => Some("Variant Also Negotiates"),
+        507 => Some("Insufficient Storage"),
+        508 => Some("Loop Detected"),
+        510 => Some("Not Extended"),
+        511 => Some("Network Authentication Required"),
+        _ => None,
     }
 }

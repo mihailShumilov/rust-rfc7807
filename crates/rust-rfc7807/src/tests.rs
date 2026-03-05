@@ -19,10 +19,11 @@ fn none_fields_omitted_in_json() {
     let json = serde_json::to_value(&problem).unwrap();
     let obj = json.as_object().unwrap();
 
-    assert_eq!(obj.len(), 1, "only status should be present");
+    // status + title (auto-set per RFC 7807 §4.2 about:blank behavior)
+    assert_eq!(obj.len(), 2);
     assert_eq!(json["status"], 404);
+    assert_eq!(json["title"], "Not Found");
     assert!(obj.get("type").is_none());
-    assert!(obj.get("title").is_none());
     assert!(obj.get("detail").is_none());
     assert!(obj.get("instance").is_none());
 }
@@ -223,6 +224,53 @@ fn to_json_string_pretty_works() {
 }
 
 // ---------------------------------------------------------------------------
+// RFC 7807 §4.2: about:blank default and auto-title
+// ---------------------------------------------------------------------------
+
+#[test]
+fn get_type_returns_about_blank_when_unset() {
+    let problem = Problem::new(404);
+    assert_eq!(problem.get_type(), "about:blank");
+}
+
+#[test]
+fn get_type_returns_explicit_type_when_set() {
+    let problem = Problem::new(404).type_("https://example.com/not-found");
+    assert_eq!(problem.get_type(), "https://example.com/not-found");
+}
+
+#[test]
+fn new_auto_sets_title_from_status_phrase() {
+    assert_eq!(Problem::new(400).title.as_deref(), Some("Bad Request"));
+    assert_eq!(Problem::new(404).title.as_deref(), Some("Not Found"));
+    assert_eq!(
+        Problem::new(429).title.as_deref(),
+        Some("Too Many Requests")
+    );
+    assert_eq!(
+        Problem::new(500).title.as_deref(),
+        Some("Internal Server Error")
+    );
+}
+
+#[test]
+fn new_with_unknown_status_has_no_auto_title() {
+    let problem = Problem::new(599);
+    assert!(problem.title.is_none());
+}
+
+#[test]
+fn explicit_title_overrides_auto_title() {
+    let problem = Problem::new(404).title("Custom Title");
+    assert_eq!(problem.title.as_deref(), Some("Custom Title"));
+}
+
+#[test]
+fn about_blank_constant() {
+    assert_eq!(Problem::ABOUT_BLANK, "about:blank");
+}
+
+// ---------------------------------------------------------------------------
 // Deserialization roundtrip
 // ---------------------------------------------------------------------------
 
@@ -301,6 +349,8 @@ fn empty_extensions_not_in_json() {
     let json = serde_json::to_string(&problem).unwrap();
     let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
     let obj = parsed.as_object().unwrap();
-    assert_eq!(obj.len(), 1);
+    // status + title (auto-set), no extensions
+    assert_eq!(obj.len(), 2);
     assert!(obj.contains_key("status"));
+    assert!(obj.contains_key("title"));
 }
